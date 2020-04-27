@@ -12,13 +12,47 @@ const {
 } = require("../util/validates");
 
 // signup user
+exports.verification = (req, res) => {
+	// Download the helper library from https://www.twilio.com/docs/node/install
+	// Your Account Sid and Auth Token from twilio.com/console
+	// DANGER! This is insecure. See http://twil.io/secure
+	const accountSid = "ACa9f104f943075fad91a2f830051a43cf";
+	const authToken = "a04c79b029939e07e1d56b6db9f13dcd";
+	const client = require("twilio")(accountSid, authToken);
+
+	client.verify
+		.services("VA553caacf321ff8199084a9f8e6d6e26c")
+		.verifications.create({ to: `${req.body.phone}`, channel: "sms" })
+		.then((verification) => {
+			console.log(verification.status);
+			return res.status(201).json({ verification });
+		});
+};
+
+exports.checkCode = (req, res) => {
+	// Download the helper library from https://www.twilio.com/docs/node/install
+	// Your Account Sid and Auth Token from twilio.com/console
+	// DANGER! This is insecure. See http://twil.io/secure
+	const accountSid = "ACa9f104f943075fad91a2f830051a43cf";
+	const authToken = "a04c79b029939e07e1d56b6db9f13dcd";
+	const client = require("twilio")(accountSid, authToken);
+
+	client.verify
+		.services("VA553caacf321ff8199084a9f8e6d6e26c")
+		.verificationChecks.create({
+			to: `${req.body.phone}`,
+			code: `${req.body.code}`,
+		})
+		.then((verification_check) => console.log(verification_check.status));
+};
+
 exports.signup = (req, res) => {
 	const newUser = {
 		handle: req.body.handle,
 		email: req.body.email,
 		address: req.body.address,
 		phone: req.body.phone,
-		uid: uid,
+		uid: req.body.uid,
 	};
 
 	const { valid, errors } = validateSignUpData(newUser);
@@ -28,35 +62,19 @@ exports.signup = (req, res) => {
 	const noImg = "no-img.png";
 
 	let token, userId;
+	const userCredentials = {
+		handle: newUser.handle,
+		email: newUser.email,
+		phone: newUser.phone,
+		address: newUser.address,
+		createdAt: new Date(),
+		imageUrl: `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${noImg}?alt=media`,
+		userId: newUser.uid,
+	};
 	db.doc(`/users/${newUser.handle}`)
-		.get()
-		.then((doc) => {
-			if (doc.exists) {
-				return res.status(400).json({ handle: "Username is already taken" });
-			}
-			// else {
-			// 	return firebase.auth().signInWithPhoneNumber(newUser.phone).then()
-			// }
-		})
-		.then((data) => {
-			userId = data.user.uid;
-			return data.user.getIdToken();
-		})
-		.then((idToken) => {
-			token = idToken;
-			const userCredentials = {
-				handle: newUser.handle,
-				email: newUser.email,
-				phone: newUser.phone,
-				address: newUser.address,
-				createdAt: new Date(),
-				imageUrl: `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${noImg}?alt=media`,
-				userId,
-			};
-			return db.doc(`/users/${newUser.handle}`).set(userCredentials);
-		})
+		.set(userCredentials)
 		.then(() => {
-			return res.status(201).json({ token });
+			return res.status(201).json({ userCredentials });
 		})
 		.catch((error) => {
 			if (error.code === "auth/email-already-in-use") {

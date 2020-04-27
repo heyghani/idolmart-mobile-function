@@ -4,12 +4,6 @@ const isEmail = (email) => {
 	else return false;
 };
 
-const isPhone = (phone) => {
-	const regEx = /^\+?([0-9]{2})\)?[-. ]?([0-9]{4})[-. ]?([0-9]{4})$/;
-	if (phone.match(regEx)) return true;
-	else return false;
-};
-
 const isEmpty = (string) => {
 	if (string.trim() === "") return true;
 	else return false;
@@ -26,8 +20,6 @@ exports.validateSignUpData = (data) => {
 
 	if (isEmpty(data.phone)) {
 		errors.phone = "Must not be empty";
-	} else if (!isPhone(data.phone)) {
-		errors.phone = "Must be a valid phone number";
 	}
 
 	if (isEmpty(data.address)) errors.address = "Must not be empty";
