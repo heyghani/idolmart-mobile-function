@@ -9,7 +9,7 @@ const isEmpty = (string) => {
 	else return false;
 };
 
-exports.validateSignUpData = (data) => {
+exports.validateSignupData = (data) => {
 	let errors = {};
 
 	if (isEmpty(data.email)) {
@@ -18,13 +18,10 @@ exports.validateSignUpData = (data) => {
 		errors.email = "Must be a valid email address";
 	}
 
-	if (isEmpty(data.phone)) {
-		errors.phone = "Must not be empty";
-	}
-
-	if (isEmpty(data.address)) errors.address = "Must not be empty";
+	if (isEmpty(data.password)) errors.password = "Must not be empty";
+	if (data.password !== data.confirmPassword)
+		errors.confirmPassword = "Passwords must match";
 	if (isEmpty(data.handle)) errors.handle = "Must not be empty";
-	if (isEmpty(data.phone)) errors.phone = "Must not be empty";
 
 	return {
 		errors,

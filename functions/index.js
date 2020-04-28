@@ -38,8 +38,8 @@ app.get("/activity/:activityId/unlike", FBAuth, unlikeActivity);
 app.post("/activity/:activityId/comment", FBAuth, commentOnActivity);
 
 // users route
-app.get("/verification", verification);
-app.get("/check", checkCode);
+app.post("/verification", verification);
+app.post("/check", checkCode);
 app.post("/signup", signup);
 app.post("/login", login);
 app.post("/user/image", FBAuth, uploadImage);

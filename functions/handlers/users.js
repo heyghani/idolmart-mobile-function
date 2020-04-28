@@ -20,9 +20,13 @@ exports.verification = (req, res) => {
 	const authToken = "a04c79b029939e07e1d56b6db9f13dcd";
 	const client = require("twilio")(accountSid, authToken);
 
+	const verify = {
+		phone: req.body.phone,
+	};
+
 	client.verify
-		.services("VA553caacf321ff8199084a9f8e6d6e26c")
-		.verifications.create({ to: `${req.body.phone}`, channel: "sms" })
+		.services("VA1634d34bcce52b6ae4dd682b500d2479")
+		.verifications.create({ to: verify.phone, channel: "sms" })
 		.then((verification) => {
 			console.log(verification.status);
 			return res.status(201).json({ verification });
@@ -37,52 +41,78 @@ exports.checkCode = (req, res) => {
 	const authToken = "a04c79b029939e07e1d56b6db9f13dcd";
 	const client = require("twilio")(accountSid, authToken);
 
+	const check = {
+		phone: req.body.phone,
+		code: req.body.code,
+	};
+
 	client.verify
-		.services("VA553caacf321ff8199084a9f8e6d6e26c")
+		.services("VA1634d34bcce52b6ae4dd682b500d2479")
 		.verificationChecks.create({
-			to: `${req.body.phone}`,
-			code: `${req.body.code}`,
+			to: check.phone,
+			code: check.code,
 		})
-		.then((verification_check) => console.log(verification_check.status));
+		.then((verification_check) => {
+			console.log(verification_check.status);
+			return res.status(201).json({ verification_check });
+		});
 };
 
 exports.signup = (req, res) => {
 	const newUser = {
-		handle: req.body.handle,
 		email: req.body.email,
-		address: req.body.address,
-		phone: req.body.phone,
-		uid: req.body.uid,
+		password: req.body.password,
+		confirmPassword: req.body.confirmPassword,
+		handle: req.body.handle,
 	};
 
-	const { valid, errors } = validateSignUpData(newUser);
+	const { valid, errors } = validateSignupData(newUser);
 
 	if (!valid) return res.status(400).json(errors);
 
 	const noImg = "no-img.png";
 
 	let token, userId;
-	const userCredentials = {
-		handle: newUser.handle,
-		email: newUser.email,
-		phone: newUser.phone,
-		address: newUser.address,
-		createdAt: new Date(),
-		imageUrl: `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${noImg}?alt=media`,
-		userId: newUser.uid,
-	};
 	db.doc(`/users/${newUser.handle}`)
-		.set(userCredentials)
-		.then(() => {
-			return res.status(201).json({ userCredentials });
+		.get()
+		.then((doc) => {
+			if (doc.exists) {
+				return res
+					.status(400)
+					.json({ handle: "this username is already taken" });
+			} else {
+				return firebase
+					.auth()
+					.createUserWithEmailAndPassword(newUser.email, newUser.password);
+			}
 		})
-		.catch((error) => {
-			if (error.code === "auth/email-already-in-use") {
-				return res.status(400).json({ email: "Email is already in use" });
+		.then((data) => {
+			userId = data.user.uid;
+			return data.user.getIdToken();
+		})
+		.then((idToken) => {
+			token = idToken;
+			const userCredentials = {
+				handle: newUser.handle,
+				email: newUser.email,
+				createdAt: new Date(),
+				//TODO Append token to imageUrl. Work around just add token from image in storage.
+				imageUrl: `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${noImg}?alt=media`,
+				userId,
+			};
+			return db.doc(`/users/${newUser.handle}`).set(userCredentials);
+		})
+		.then(() => {
+			return res.status(201).json({ token });
+		})
+		.catch((err) => {
+			console.error(err);
+			if (err.code === "auth/email-already-in-use") {
+				return res.status(400).json({ email: "Email is already is use" });
 			} else {
 				return res
 					.status(500)
-					.json({ general: "Something went wrong please try again" });
+					.json({ general: "Something went wrong, please try again" });
 			}
 		});
 };
