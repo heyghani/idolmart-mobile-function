@@ -6,39 +6,34 @@ const firebase = require("firebase");
 firebase.initializeApp(config);
 
 const {
-	validateSignUpData,
+	validateSignupData,
 	validateLoginData,
 	reduceUserDetails,
 } = require("../util/validates");
+
+const { accountSid, authToken, serviceId } = require("../util/twilio");
 
 // signup user
 exports.verification = (req, res) => {
 	// Download the helper library from https://www.twilio.com/docs/node/install
 	// Your Account Sid and Auth Token from twilio.com/console
 	// DANGER! This is insecure. See http://twil.io/secure
-	const accountSid = "ACa9f104f943075fad91a2f830051a43cf";
-	const authToken = "a04c79b029939e07e1d56b6db9f13dcd";
 	const client = require("twilio")(accountSid, authToken);
 
-	const verify = {
-		phone: req.body.phone,
-	};
-
 	client.verify
-		.services("VA1634d34bcce52b6ae4dd682b500d2479")
-		.verifications.create({ to: verify.phone, channel: "sms" })
+		.services(serviceId)
+		.verifications.create({ to: req.body.phone, channel: req.body.channel })
 		.then((verification) => {
-			console.log(verification.status);
-			return res.status(201).json({ verification });
-		});
+			console.log(verification);
+			return res.json({ verification });
+		})
+		.catch((error) => res.status(400).json(error));
 };
 
 exports.checkCode = (req, res) => {
 	// Download the helper library from https://www.twilio.com/docs/node/install
 	// Your Account Sid and Auth Token from twilio.com/console
 	// DANGER! This is insecure. See http://twil.io/secure
-	const accountSid = "ACa9f104f943075fad91a2f830051a43cf";
-	const authToken = "a04c79b029939e07e1d56b6db9f13dcd";
 	const client = require("twilio")(accountSid, authToken);
 
 	const check = {
@@ -47,19 +42,19 @@ exports.checkCode = (req, res) => {
 	};
 
 	client.verify
-		.services("VA1634d34bcce52b6ae4dd682b500d2479")
+		.services(serviceId)
 		.verificationChecks.create({
 			to: check.phone,
 			code: check.code,
 		})
 		.then((verification_check) => {
-			console.log(verification_check.status);
-			return res.status(201).json({ verification_check });
+			return res.json({ verification_check });
 		});
 };
 
 exports.signup = (req, res) => {
 	const newUser = {
+		phone: req.body.phone,
 		email: req.body.email,
 		password: req.body.password,
 		confirmPassword: req.body.confirmPassword,
@@ -94,8 +89,8 @@ exports.signup = (req, res) => {
 			token = idToken;
 			const userCredentials = {
 				handle: newUser.handle,
-				email: newUser.email,
-				createdAt: new Date(),
+				phone_number: newUser.phone,
+				createdAt: new Date().toISOString(),
 				//TODO Append token to imageUrl. Work around just add token from image in storage.
 				imageUrl: `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${noImg}?alt=media`,
 				userId,
@@ -108,7 +103,9 @@ exports.signup = (req, res) => {
 		.catch((err) => {
 			console.error(err);
 			if (err.code === "auth/email-already-in-use") {
-				return res.status(400).json({ email: "Email is already is use" });
+				return res
+					.status(400)
+					.json({ email: "Phone number is already is use" });
 			} else {
 				return res
 					.status(500)
@@ -120,7 +117,7 @@ exports.signup = (req, res) => {
 //login user
 exports.login = (req, res) => {
 	const user = {
-		email: req.body.email,
+		phone: req.body.phone,
 		password: req.body.password,
 	};
 
@@ -130,7 +127,7 @@ exports.login = (req, res) => {
 
 	firebase
 		.auth()
-		.signInWithEmailAndPassword(user.email, user.password)
+		.signInWithEmailAndPassword(user.phone, user.password)
 		.then((data) => {
 			return data.user.getIdToken();
 		})

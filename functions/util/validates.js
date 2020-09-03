@@ -22,7 +22,8 @@ exports.validateSignupData = (data) => {
 	if (data.password !== data.confirmPassword)
 		errors.confirmPassword = "Passwords must match";
 	if (isEmpty(data.handle)) errors.handle = "Must not be empty";
-
+	if (isEmpty(data.phone) || data.phone === "+62")
+		errors.phone = "Must not be empty";
 	return {
 		errors,
 		valid: Object.keys(errors).length === 0 ? true : false,
@@ -32,7 +33,8 @@ exports.validateSignupData = (data) => {
 exports.validateLoginData = (data) => {
 	let errors = {};
 
-	if (isEmpty(data.email)) errors.email = "Must not be empty";
+	if (data.phone === "@gmail.com" || data.phone === "+62@gmail.com")
+		errors.phone = "Must not be empty";
 	if (isEmpty(data.password)) errors.password = "Must not be empty";
 
 	return {
